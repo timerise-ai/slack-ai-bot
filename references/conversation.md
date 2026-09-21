@@ -6,20 +6,23 @@ a model answers with tools bound to that user.
 ## Flow
 
 ```
-event ─▶ author is me or a bot? ─ yes ─▶ ignore
-           │ no
-           ▼
-        origin = { team, channel, thread }   (null → log, stop)
-           ▼
-        token  = slack_installations[team]   (none → log, stop)
-           ▼
-        identity: users.info → email → findUserIdByEmail
-           │ fail: tell the person, unless this is a followed thread
-           ▼
-        👀 + ⏳ ─▶ subscribe (first contact only) ─▶ streamText(tools(userId))
-           │ throw → post a failure message
-           ▼
-        remove ⏳   (👀 stays as the "seen" receipt)
+ event --> is the author me or a bot?  -- yes --> ignore
+             | no
+             v
+          origin = { team, channel, thread }    (null: log and stop)
+             |
+             v
+          token = slack_installations[team]     (none: log and stop)
+             |
+             v
+          identity: users.info, its email, findUserIdByEmail
+             |   on failure: tell the person, unless this is a followed thread
+             v
+          add eyes + hourglass, subscribe on first contact,
+          then streamText(tools(userId))
+             |   on throw: post a failure message
+             v
+          remove the hourglass  (eyes stays as the "seen" receipt)
 ```
 
 ## Identity
@@ -98,9 +101,9 @@ export function createSlackUserResolver(deps: ResolverDeps): SlackUserResolver {
 }
 ```
 
-What changed from the source, and why each matters:
+What the audit changed here, and why each matters:
 
-| Source behaviour | Consequence | Here |
+| Earlier behaviour | Consequence | Here |
 |---|---|---|
 | Listed up to 1000 auth users, filtered in memory | User 1001 can never be matched; a full user listing on every uncached message | `findUserIdByEmail`, one query |
 | Cache keyed by Slack user id, never expired | A user removed from the app keeps bot access until the instance dies; ids collide across workspaces | Keyed `team:user`, 10-minute TTL |
@@ -134,7 +137,8 @@ export function extractSlackOrigin(raw: unknown): SlackOrigin | null {
 }
 ```
 
-The source defaulted missing ids to `""` and carried on. An empty `teamId` then
+The earlier implementation defaulted missing ids to `""` and carried on. An
+empty `teamId` then
 failed inside the adapter's installation lookup, and an empty `channelId` failed
 later inside a tool, both far from the cause.
 
@@ -257,23 +261,23 @@ Reasoning behind the non-obvious lines:
 - **`isBot === true`**, not truthiness: the SDK reports `"unknown"` when the
   platform did not say, and an unknown author should still be answered.
 - **Silent identity failure in followed threads.** Once the bot follows a
-  thread, it sees every reply. The source answered each reply from a colleague
-  without an account with "I couldn't match your Slack account", turning a team
-  discussion into a wall of bot apologies.
-- **Identity before reactions.** Reacting first puts 👀 on messages the bot then
+  thread, it sees every reply. The earlier implementation answered each reply
+  from a colleague without an account with "I couldn't match your Slack
+  account", turning a team discussion into a wall of bot apologies.
+- **Identity before reactions.** Reacting first puts the eyes reaction on messages the bot then
   ignores.
-- **`hourglass_flowing_sand`, not a custom emoji.** The source used `:loading:`,
-  which exists only in workspaces that uploaded it. The call failed silently
+- **`hourglass_flowing_sand`, not a custom emoji.** The earlier implementation
+  used `:loading:`, which exists only in workspaces that uploaded it. The call failed silently
   everywhere else, so most users never saw a progress indicator.
-- **The catch posts.** The source logged and returned; the user saw 👀, then
-  nothing, forever.
+- **The catch posts.** The earlier implementation logged and returned; the user
+  saw the eyes reaction, then nothing, forever.
 - **`thread.subscribe()` only on first contact.** It is a state write; repeating
   it on every follow-up is wasted latency.
 - **`stepCountIs(6)`** is a budget, not a suggestion. Without it a model that
   keeps calling tools runs until the function times out, holding the thread lock.
 
 The bot answers **every** human message in a followed thread, mention or not.
-That is the source's behaviour and suits DM-like threads. In busy channels it is
+That is the earlier behaviour and suits DM-like threads. In busy channels it is
 noisy; the alternative is to return early from the `"subscribed"` trigger unless
 `message.isMention` is set, and to say so in the first reply.
 
@@ -376,11 +380,11 @@ export function createBotTools(
 }
 ```
 
-**Every tool is an authorization boundary.** The source app's `get_tile_status`
-and `get_tile_result` took an id and queried with the service-role client, with
-no check that the asking user could see that tile. Any matched Slack user who
-learned or guessed an id could read another customer's results by asking the bot
-for them. Its `run_tile` did check. The pattern that prevents the mismatch is
+**Every tool is an authorization boundary.** In the earlier implementation two
+read tools took an id and queried with the service-role client, with no check
+that the asking user could see that record. Any matched Slack user who learned
+or guessed an id could read another tenant's data by asking the bot for it. The
+tool that ran the action did check. The pattern that prevents that mismatch is
 structural: **`BotHost` has no method that takes an id without a `userId`**, so
 an unscoped lookup cannot be written by accident.
 
@@ -390,25 +394,26 @@ Rules for adding tools:
   Validate with zod, then authorize in the host method.
 - Return small results. `RESULT_MAX` caps content; a list tool should cap count.
 - Descriptions are prompt text: say **when** to call the tool, not just what it
-  does. The source's descriptions all carry a "use this when…" clause.
+  does. Every description above carries a "use this when" clause.
 - A tool that causes an irreversible effect calls `requestApproval` instead of
-  acting — [approvals.md](approvals.md).
+  acting, see [approvals.md](approvals.md).
 - One write per request. The system prompt's "call run_action AT MOST ONCE" is
-  carried over from the source, whose prompt had a dedicated tool-use discipline
-  section. A model that retries a write with different parameters after an
-  ambiguous result creates duplicates, and nothing downstream can tell.
+  carried over from the earlier implementation, whose prompt had a dedicated
+  tool-use discipline section. A model that retries a write with different
+  parameters after an ambiguous result creates duplicates, and nothing
+  downstream can tell.
 
 ## System prompt
 
 The prompt in `host.ts` is deliberately short. Four lines are carried over from
-the source app's prompt, where they formed an explicit discipline section. What
-each guards against:
+the earlier implementation's prompt, where they formed an explicit discipline
+section. What each guards against:
 
 | Line | Guards against |
 |---|---|
 | "Always look data up with the tools. Never guess ids" | Invented UUIDs |
 | "call search_resources to get its id first" | Passing a name where an id is expected |
-| "run_action AT MOST ONCE … do not retry with different parameters" | Duplicate side effects |
+| "run_action AT MOST ONCE ... do not retry with different parameters" | Duplicate side effects |
 | "After every tool call either answer in text or make exactly one more tool call" | Runs that end at the step limit having said nothing |
 
 Add domain vocabulary above them; keep them.

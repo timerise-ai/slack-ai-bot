@@ -7,15 +7,15 @@ side effect exactly once.
 ## State machine
 
 ```
-            request()                 claim()                  finish()
- (nothing) ─────────▶ pending ─────────────────▶ processing ─────────▶ approved
-                         │      one conditional      │                 cancelled
-                         │      UPDATE wins          └───────────────▶ failed
-                         └── every other click ──▶ "already decided"
+             request()             claim()                 finish()
+ (nothing) ----------> pending -------------> processing ----------> approved
+                          |  one conditional      |                  cancelled
+                          |  UPDATE wins          '---------------> failed
+                          '-- every other click --> "already decided"
 ```
 
-`pending → processing` is the only transition that needs to be atomic, and it is
-the whole design. Everything after it runs for exactly one caller.
+`pending` to `processing` is the only transition that has to be atomic, and it
+is the whole design. Everything after it runs for exactly one caller.
 
 ## Service
 
@@ -227,12 +227,12 @@ export type ApprovalService = ReturnType<typeof createApprovalService>;
 
 Why it is shaped this way:
 
-- **Claim, then act.** The source app loaded the draft, checked
+- **Claim, then act.** The earlier implementation loaded the draft, checked
   `status === "draft"` in application code, sent the email, then wrote
   `status: "sent"`. Two clicks a moment apart both pass the check and both send.
   The slow path made a second click likely: the send ran *before* Slack was
   acknowledged, Slack showed "operation timed out" after three seconds, and the
-  natural response to that is to click again. The customer gets the offer twice.
+  natural response to that is to click again. The recipient gets the email twice.
 - **Row first, message second.** A posted button whose row failed to insert is a
   button that can only ever answer "not found".
 - **Authorize the clicker.** Anyone in the channel can click. The check is
@@ -249,7 +249,7 @@ Why it is shaped this way:
 
 ## Requesting an approval
 
-From a host action — this is the demo `runAction` in
+From a host action, this is the demo `runAction` in
 [adaptation.md](adaptation.md) with a real payload:
 
 ```ts
@@ -324,7 +324,7 @@ export function verifySlackSignature(input: {
 }
 ```
 
-Two fixes over the source, both tested:
+Two fixes the audit made here, both tested:
 
 - It compared **string** lengths, then called `timingSafeEqual` on buffers. A
   forged signature of the right character count containing one multi-byte
@@ -424,13 +424,13 @@ async function handleBlockActions(payload: BlockActionsPayload): Promise<void> {
 ```
 
 - **Ack first.** `after()` defers the work until the 200 has gone out. The
-  source did identity resolution, the email send and two database writes before
-  responding.
-- **`response_url` for the unhappy paths.** The source logged a refused click
-  and returned 200; the person clicked a button and nothing happened, with no
-  way to learn why. An ephemeral reply is visible only to the clicker, needs no
-  token, and works in channels the bot cannot otherwise post to. *This is an
-  addition; the source had no user feedback on refusal.*
+  earlier implementation did identity resolution, the email send and two
+  database writes before responding.
+- **`response_url` for the unhappy paths.** The earlier implementation logged a
+  refused click and returned 200; the person clicked a button and nothing
+  happened, with no way to learn why. An ephemeral reply is visible only to the
+  clicker, needs no token, and works in channels the bot cannot otherwise post
+  to. *This is an addition; there was no feedback on a refused click before.*
 - **Unknown `action_id`s are skipped, not errors.** Other features will add
   buttons, and this route receives all of them.
 - **Non-`block_actions` payloads** (`view_submission`, shortcuts) are
@@ -440,14 +440,15 @@ async function handleBlockActions(payload: BlockActionsPayload): Promise<void> {
 
 The Chat SDK can receive interactions itself: point Slack's interactivity URL at
 the events route and register `bot.onAction([APPROVE_ACTION_ID, CANCEL_ACTION_ID], handler)`.
-That removes this route and the hand-rolled verification. *It was not used in
-the source app and has not been exercised by this skill's verification.* The
-service above is independent of the transport; only the route changes.
+That removes this route and the hand-rolled verification. *The earlier
+implementation did not use it, and this skill's verification does not cover
+it.* The service above is independent of the transport; only the route
+changes.
 
 ## Checklist
 
 - [ ] Button `value` is the approval id and nothing else
-- [ ] `claim` is one conditional write — [data-model.md](data-model.md)
+- [ ] `claim` is one conditional write, see [data-model.md](data-model.md)
 - [ ] Clicker resolved to an app user and checked against the resource
 - [ ] 200 returned before any slow work
 - [ ] Refusals answered through `response_url`

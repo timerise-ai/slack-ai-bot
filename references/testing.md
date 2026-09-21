@@ -14,7 +14,7 @@ end-to-end pass is the manual script at the bottom.
 ## Running
 
 Written for `bun:test`. For vitest, change the one import to
-`import { describe, expect, it } from "vitest";` — the API used is common to both.
+`import { describe, expect, it } from "vitest";`; the API used is common to both.
 
 ```bash
 bun test lib/slack-bot
@@ -28,7 +28,7 @@ bun test lib/slack-bot
 | `extractSlackOrigin` | Reply vs thread root; never an origin with empty ids |
 | `createSlackUserResolver` | Case-insensitive; cache is per workspace, expires, and never stores a miss; missing scope is its own reason |
 | OAuth helpers | Required scopes present; open-redirect inputs collapse to `/`; query strings merge |
-| `markdownToMrkdwn` | The three source regressions, plus code and tables left intact |
+| `markdownToMrkdwn` | The three converter regressions, plus code and tables left intact |
 | outbound | No chunk over the limit and no text lost; 50-block ceiling with a visible note; 429 retried once; `ok:false` throws |
 | approval round trip | Opaque button value; **one execution under three concurrent clicks**; outsider refused without consuming the claim; cancel is final; thrown executor recorded and buttons removed |
 
@@ -306,7 +306,7 @@ describe("approval round trip", () => {
 });
 ```
 
-Adjust the relative imports (`../lib/slack-bot/…`) to where the file lands.
+Adjust the relative imports (`../lib/slack-bot/...`) to where the file lands.
 
 ## Manual end-to-end script
 
@@ -314,7 +314,8 @@ Against a real workspace, after deploy:
 
 1. Install through the app's own Connect button, **not** Slack's config page.
    Confirm the consent screen lists "View email addresses".
-2. Mention the bot in a channel. Expect 👀, ⏳, a streamed answer, ⏳ removed.
+2. Mention the bot in a channel. Expect the eyes reaction, then the hourglass,
+   a streamed answer, and the hourglass removed.
 3. Reply in that thread **without** mentioning it. Expect an answer.
 4. Redeploy (forces cold instances), reply in the same thread again. Expect an
    answer. This is the shared-state check; with memory state it fails here.

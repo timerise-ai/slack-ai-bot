@@ -1,60 +1,61 @@
 # Provenance
 
-Extracted from the Slack bot of a production Next.js 16 application on Vercel
-and Supabase: an intelligence-gathering product whose bot lists and searches a
-user's workspaces, reads results, runs jobs on demand, and sends AI-drafted
-emails after a human approves them in a Slack thread. About 2,600 lines across
-the bot, the Slack client, OAuth and two webhook routes.
+The engineering ledger behind the templates, for the person editing this skill.
+It keeps three things apart: what the audit of the earlier implementation
+changed and how the templates verify it, what was kept deliberately and why it
+is safe, and what was designed here and has never run in production.
 
-**Fidelity: hardened.** The architecture, the handler flow, the tool-scoping
-pattern, the approval round trip and the block-splitting are the source's. The
-defects below are fixed in the templates. Domain code (job execution, vector
-search, catalog and GitHub integrations, channel-history reading) was left
-behind as host-specific.
+The earlier implementation was the Slack assistant of a Next.js 16 application
+on Vercel and Supabase: it answered questions about the asking user's own
+records, ran work on request, and posted drafts for a human to approve in a
+thread. The architecture, the handler flow, the tool-scoping pattern, the
+approval round trip and the block-splitting come from it. Its domain code stayed
+in the host app, where it belongs.
 
-Every defect was confirmed by reading the source. Two were also confirmed by
-execution: the Markdown converter's outputs and the signature comparison's
+Every defect below was confirmed by reading that code. Two were also confirmed
+by execution: the Markdown converter's outputs and the signature comparison's
 thrown error. Production impact was **not** observed; the consequences stated
 are what the code does, not incident reports.
 
 ## Fixed in the templates
 
-### 1. Two tools read any customer's data by id
-`get_tile_status` and `get_tile_result` queried with the service-role client and
-never checked that the asking user could see the tile. The run tool did check.
-**Shipped:** `BotHost` has no id-only method; every lookup takes `userId` —
+### 1. Two read tools returned any tenant's data by id
+Both queried with the service-role client and never checked that the asking user
+could see the record. The tool that ran the action did check.
+**Shipped:** `BotHost` has no id-only method; every lookup takes `userId`, see
 [conversation.md](conversation.md), [adaptation.md](adaptation.md).
 
 ### 2. The install flow did not request the scopes identity depends on
 The authorize URL omitted `users:read.email`, `app_mentions:read`, `im:read`
 and `im:write`, though the setup docs listed them. Tokens from the app's own
 Connect button cannot read emails, so no user can be matched.
-**Shipped:** one exported scope list, with a test — [setup.md](setup.md).
+**Shipped:** one exported scope list, with a test, see [setup.md](setup.md).
 
 ### 3. In-memory chat state in a serverless deployment
 Subscriptions, dedupe and locks were per-instance. Thread follow-ups are dropped
 whenever they land on an instance that did not see the first mention.
-**Shipped:** state is a seam with production adapters named — [setup.md](setup.md).
+**Shipped:** state is a seam with production adapters named, see [setup.md](setup.md).
 
 ### 4. Approve could send twice
 Status was checked in application code, the email sent, then status written.
 The send also ran before Slack's 3-second ack, which invites the second click.
-**Shipped:** conditional-update claim; ack before work — [approvals.md](approvals.md).
+**Shipped:** conditional-update claim; ack before work, see [approvals.md](approvals.md).
 
 ### 5. Initialization race on cold start
 A boolean was set before the awaits. A second webhook during init skipped it and
 reached a bot with no handlers registered.
-**Shipped:** cached promise, cleared on failure — [setup.md](setup.md).
+**Shipped:** cached promise, cleared on failure, see [setup.md](setup.md).
 
 ### 6. Identity lookup capped at 1000 users, cache never expired
 `listUsers({ perPage: 1000 })` filtered in memory; positive matches cached for
 the life of the instance, keyed without the workspace.
-**Shipped:** single-query contract, `team:user` key, TTL — [conversation.md](conversation.md).
+**Shipped:** single-query contract, `team:user` key, TTL, see
+[conversation.md](conversation.md).
 
 ### 7. Bot token chosen by unordered `limit(1)`
 Tokens were stored per `(user, provider, team)`; several lookups took "the first"
 row, one of them with no team filter at all.
-**Shipped:** one row per workspace — [data-model.md](data-model.md).
+**Shipped:** one row per workspace, see [data-model.md](data-model.md).
 
 ### 8. Failures were silent
 Handler errors were logged and swallowed; refused or failed button clicks
@@ -67,18 +68,19 @@ without an account in a followed thread, got the "couldn't match" reply.
 **Shipped:** bot authors ignored; silent in followed threads.
 
 ### 10. Markdown converter corrupted bold headings, bold-italic and arithmetic
-Verified by running it: `# **Title**` → `**Title**`, `***x***` → `__x__`,
-`2 * 3 * 4` → `2 _ 3 _ 4`.
-**Shipped:** placeholder-parking converter with regression tests — [outbound.md](outbound.md).
+Verified by running it: `# **Title**` came out as `**Title**`, `***x***` as
+`__x__`, and `2 * 3 * 4` as `2 _ 3 _ 4`.
+**Shipped:** placeholder-parking converter with regression tests, see
+[outbound.md](outbound.md).
 
 ### 11. OAuth return path was an open redirect and broke on query strings
-`${appUrl}${returnTo}?flag=1` with `returnTo` taken from `state`.
+`${appUrl}${returnTo}?flag=1` with `returnTo` read out of `state`.
 **Shipped:** `safeReturnPath`, `withParam`, return path in the cookie.
 
 ### 12. Signature check could throw instead of rejecting
 String-length comparison before a byte-length-sensitive `timingSafeEqual`;
 `parseInt` accepted junk timestamps.
-**Shipped:** byte-length guard, digit check, tests — [approvals.md](approvals.md).
+**Shipped:** byte-length guard, digit check, tests, see [approvals.md](approvals.md).
 
 ### 13. Progress reaction used a custom emoji
 `:loading:` exists only where someone uploaded it; elsewhere the call failed
@@ -101,7 +103,7 @@ that nothing called.
 - **`fullStream` with a plain-text fallback.** Streaming to Slack fails for
   reasons outside the app's control; the fallback is what keeps an answer
   arriving.
-- **👀 stays on the message.** It is the receipt that the bot saw it; only the
+- **The eyes reaction stays on the message.** It is the receipt that the bot saw it; only the
   progress emoji is removed.
 - **Answering every human message in a followed thread.** A product decision;
   the alternative is described in [conversation.md](conversation.md).
@@ -111,28 +113,31 @@ that nothing called.
 
 ## Added
 
-Not in the source; designed here and covered by tests where marked.
+Not in the earlier implementation. Designed here, and covered by tests where
+marked.
 
-- `installationProvider` instead of seeding chat state (type-checked; lookup path
-  read in the adapter source; **not run in production**).
-- A dedicated `slack_approvals` table and the generic `kind` → executor registry.
-  The source had one hard-coded approval type stored inside a job-result JSON.
+- `installationProvider` instead of seeding chat state (type-checked; lookup
+  path verified in the adapter's own code; **not run in production**).
+- A dedicated `slack_approvals` table and the generic `kind` to executor registry.
+  The earlier implementation had one hard-coded approval type, stored inside
+  another row's JSON.
 - `response_url` ephemeral feedback. (the refusal reasons are tested; the HTTP call is not)
 - Single 429 retry honouring `Retry-After`. (tested)
 - Differentiated identity failure reasons. (tested)
 - Header length guard and `missing_ts` error in the poster.
-- All of [operations.md](operations.md) beyond the symptom causes: the source had
-  no operator surface.
+- All of [operations.md](operations.md) beyond the symptom causes: there was no
+  operator surface to carry over.
 
 ## Left behind
 
-Channel-history reading, Slack channel listing, the web-search tool, vector
-search over resources, Google Sheets and GitHub integrations, per-user execution
-rate limiting. The last is worth rebuilding in any host whose actions cost money.
+Channel-history reading, channel listing, web search, semantic search over
+resources, third-party data integrations, and per-user execution rate limiting.
+The last is worth rebuilding in any host whose actions cost money.
 
-## If you are porting the original
+## Fixing a bot that already runs
 
-Fix order, most damaging first:
+If you are applying this skill to an existing Slack bot rather than building
+one, fix in this order, most damaging first:
 
 1. Add the access check to the two id-only tools (#1).
 2. Add the missing scopes to the authorize URL, then have each workspace

@@ -7,6 +7,7 @@ Web API over `fetch`, with the workspace's token from `slack_installations`.
 ## Calling it
 
 ```ts
+// the caller, anywhere in the host app: lib/reports/deliver-to-slack.ts
 import { botHost } from "@/lib/slack-bot/host";
 import { markdownToMrkdwn } from "@/lib/slack-bot/mrkdwn";
 import { postReport } from "@/lib/slack-bot/outbound";
@@ -31,10 +32,11 @@ Store the destination as **`(team_id, channel_id)`**, never a channel id alone:
 channel ids are only meaningful inside their workspace, and the team id is what
 selects the token.
 
-Whether delivery failure should fail the job is the caller's decision. The
-source app treated it as fire-and-forget and only logged; that hides a revoked
-token or an archived channel indefinitely. Prefer recording the last delivery
-error where an operator can see it — [operations.md](operations.md).
+Whether delivery failure should fail the job is the caller's decision. Treating
+it as fire-and-forget and logging it, which is what the earlier implementation
+did, hides a revoked token or an archived channel indefinitely. Prefer recording
+the last delivery error where an operator can see it, see
+[operations.md](operations.md).
 
 The bot must be **in the channel** to post there (`not_in_channel` otherwise).
 Invite it, or add the `chat:write.public` scope for public channels.
@@ -259,8 +261,8 @@ last block says the content was cut; the reader is never left guessing.
 `channel_not_found`, `not_in_channel`, `token_revoked`, `missing_scope`.
 A client that only checks `res.ok` reports success for all of them.
 
-The 429 retry is a single attempt capped at ten seconds. *The source app had no
-retry; this is an addition.* A job that posts to many channels should still pace
+The 429 retry is a single attempt capped at ten seconds. *This is an addition;
+the earlier implementation had no retry.* A job that posts to many channels should still pace
 itself rather than lean on it.
 
 ## Markdown to mrkdwn
@@ -344,10 +346,10 @@ function wrapTables(text: string, park: (t: string) => string): string {
 }
 ```
 
-The placeholder parking is the point of this file. The source app's converter
-rewrote in place, in sequence, and its passes fed each other. Running it shows:
+The placeholder parking is the point of this file. The earlier converter rewrote
+in place, in sequence, so its passes fed each other. Running it shows:
 
-| Input | Source output | Rendered in Slack as |
+| Input | Earlier output | Rendered in Slack as |
 |---|---|---|
 | `***both***` | `__both__` | literal underscores |
 | `# **Title**` | `**Title**` | literal asterisks |
@@ -361,8 +363,8 @@ reports.
 Markdown natively. It is capped at 12,000 characters and is mutually exclusive
 with `text` and `blocks`, so it cannot carry a header block, a truncation note or
 buttons. For a plain short message it replaces this converter; for reports and
-approvals it does not. *Noted from the Slack adapter's source, not used by the
-source app.*
+approvals it does not. *Verified against the Slack adapter's own code; not used
+by the earlier implementation.*
 
 This converter is for **app-generated** text going through `chat.postMessage`.
 Replies streamed through the Chat SDK's `thread.post` are converted by the
@@ -385,7 +387,7 @@ export const BOT_STRINGS = {
   identityUnavailable: "I couldn't reach Slack to check who you are. Try again in a minute.",
   answerFailed: "Something went wrong while I was working on that. Nothing was changed; try again.",
   streamFallback: "I ran into a problem finishing that reply.",
-  previewTruncated: "…(truncated)",
+  previewTruncated: "...(truncated)",
   approveButton: "Approve",
   cancelButton: "Cancel",
   approvalApproved: ":white_check_mark: *Approved and done*",

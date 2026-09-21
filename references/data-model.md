@@ -1,7 +1,7 @@
 # Data model
 
 Two tables. Chat state (subscriptions, locks, dedupe) is **not** here; it lives
-in the Chat SDK state adapter — [setup.md](setup.md).
+in the Chat SDK state adapter, see [setup.md](setup.md).
 
 ## Shapes
 
@@ -83,12 +83,12 @@ export interface ApprovalStore {
 
 | Decision | Reason |
 |---|---|
-| `slack_installations` keyed by `team_id` alone | A bot token belongs to the workspace. The source app stored tokens per `(user, provider, team)` and picked one with an unordered `limit(1)`; when two people connected the same workspace, which row won varied between queries. |
+| `slack_installations` keyed by `team_id` alone | A bot token belongs to the workspace. The earlier implementation stored tokens per `(user, provider, team)` and picked one with an unordered `limit(1)`; when two people connected the same workspace, which row won varied between queries. |
 | `installed_by_user_id` is audit only | Picking a token through "the owner's integration" breaks the day the owner leaves. |
-| `status` has a `processing` state | It is the claim. `pending → processing` is the one transition that must be atomic; see [approvals.md](approvals.md). |
+| `status` has a `processing` state | It is the claim. `pending` to `processing` is the one transition that must be atomic; see [approvals.md](approvals.md). |
 | `payload` frozen at request time | What the human previewed is what runs. Re-deriving at approve time lets the data change between preview and send. |
 | `origin` stored on the approval | The click arrives with no memory of the conversation; the row is how the app finds the message to rewrite. |
-| Approvals are their own table | The source app kept draft state inside the JSON of a job-result row and updated it by read-modify-write. That cannot be claimed atomically. |
+| Approvals are their own table | The earlier implementation kept the parked state inside the JSON of another row and updated it by read-modify-write. That cannot be claimed atomically. |
 
 ## Schema (Postgres)
 
@@ -137,7 +137,7 @@ alter table public.slack_approvals    enable row level security;
 
 `bot_token` is a live credential. At minimum keep the table service-role only,
 as above. Encrypting the column (pgsodium / Vault, or app-level AES-GCM with a
-key in env) is recommended and was **not** done in the source app.
+key in env) is recommended, and was **not** done in the earlier implementation.
 
 Without Supabase, drop the `references auth.users` clause and point
 `installed_by_user_id` at your own users table.
@@ -385,9 +385,9 @@ The only operation that needs care is `claim`. Everything else is plain CRUD.
 
 | Layer | `claim` |
 |---|---|
-| Drizzle | `db.update(approvals).set({ status: "processing", decidedByUserId }).where(and(eq(approvals.id, id), eq(approvals.status, "pending"))).returning()` — empty array means lost the race |
-| Prisma | `updateMany({ where: { id, status: "pending" }, data: {…} })`, then check `count === 1` and re-read. `update` throws on no match; `updateMany` does not |
-| Raw SQL | `update slack_approvals set status='processing', … where id=$1 and status='pending' returning *` |
+| Drizzle | `db.update(approvals).set({ status: "processing", decidedByUserId }).where(and(eq(approvals.id, id), eq(approvals.status, "pending"))).returning()`; an empty array means it lost the race |
+| Prisma | `updateMany({ where: { id, status: "pending" }, data: {...} })`, then check `count === 1` and re-read. `update` throws on no match; `updateMany` does not |
+| Raw SQL | `update slack_approvals set status='processing', ... where id=$1 and status='pending' returning *` |
 | Firestore | A transaction that reads the doc and throws unless `status === "pending"`. A plain `update` has no precondition on field values |
 
 What never works: `select`, check `status` in application code, then `update`.

@@ -17,7 +17,7 @@ right-hand column before writing anything else.
 | **Side effects** | `approvalExecutors[kind]` signature | Email send, publish, payment, whatever waits for a human |
 | **Background work** | "ack now, work after": `after()` from `next/server` | `waitUntil` from `@vercel/functions`, or a queue |
 | **Object storage** | None | None |
-| **UI primitives** | Block Kit structure only: section, divider, preview, actions | Nothing; Slack renders it. A "Connect Slack" button in the host's own UI kit links to `/api/auth/slack/connect?return_to=…` |
+| **UI primitives** | Block Kit structure only: section, divider, preview, actions | Nothing; Slack renders it. A "Connect Slack" button in the host's own UI kit links to `/api/auth/slack/connect?return_to=...` |
 | **Styling** | None | None |
 | **Strings** | `BOT_STRINGS`, one block, keys not inline literals | Translations; a per-locale lookup if the product is multilingual |
 | **Validation** | zod schemas on tool inputs | Already zod via the AI SDK; nothing to swap |
@@ -29,15 +29,15 @@ Decide once, apply everywhere: types, tool names, tool descriptions, the system
 prompt, table columns. Tool names and descriptions are **prompt text**, so a
 half-renamed tool set makes the model call the wrong thing.
 
-| Canonical | Meaning | Source app used | Your app |
-|---|---|---|---|
-| `Resource` | A thing the user owns and asks about | Tile (inside a Mosaic) | ← confirm |
-| `resourceId` | What access is checked against | tile id → mosaic membership | |
-| `search_resources` | Find by name | `search`, `find_tile` (vector search) | |
-| `get_resource` | Latest content | `get_tile_result`, `get_tile_status` | |
-| `run_action` | Execute now | `run_tile` | |
-| `Approval` | A parked side effect | Offer draft | |
-| `kind` | Which executor | `offer_sender` only | |
+| Canonical | Meaning | Your app |
+|---|---|---|
+| `Resource` | A thing the user owns and asks about | |
+| `resourceId` | What `canAccess` is checked against | |
+| `search_resources` | Find one by name | |
+| `get_resource` | Its latest content | |
+| `run_action` | Execute now | |
+| `Approval` | A parked side effect | |
+| `kind` | Which executor runs on approve | |
 
 Do not rename Slack's own terms: `team_id`, `channel`, `thread_ts`, `ts`,
 `action_id`, `block_actions`, `response_url` belong to the platform.
@@ -198,8 +198,8 @@ Notes on the parts that are easy to get wrong:
 - **`runAction` re-checks access itself.** Do not rely on the model having
   called `search_resources` first; it may have been handed an id in the chat.
 - **`model`** is a plain string resolved by the AI Gateway. Provider-specific
-  options (the source app passed a Gemini thinking budget) belong next to
-  `streamText` in `handlers.ts`, not in this interface.
+  options, a thinking budget for example, belong next to `streamText` in
+  `handlers.ts`, not in this interface.
 - **`getCurrentUserId` defaults to `null`**, which makes the install route
   answer 401. That is the safe default; an accidental `return "user_1"` would
   attribute every installation to one account.
@@ -232,9 +232,9 @@ export const approvalService = createApprovalService({
 
 ## Identity lookup
 
-`findUserIdByEmail` must be **one indexed query**. The source app listed the
-first 1000 auth users and filtered in memory, on every uncached message; user
-1001 could never be matched and nothing said why.
+`findUserIdByEmail` must be **one indexed query**. The earlier implementation
+listed the first 1000 auth users and filtered them in memory, on every uncached
+message; user 1001 could never be matched and nothing said why.
 
 Supabase has no admin "get user by email" call, so expose one through SQL.
 *Not compiled or run as part of this skill's verification; review it against
@@ -257,6 +257,7 @@ grant execute on function public.find_user_id_by_email(text) to service_role;
 ```
 
 ```ts
+// lib/slack-bot/host.ts, the real body for the seam above
 async findUserIdByEmail(email) {
   const { data, error } = await adminClient.rpc("find_user_id_by_email", { p_email: email });
   if (error) throw new Error(`find_user_id_by_email failed: ${error.message}`);
@@ -274,7 +275,7 @@ workspace may install your app, treat the installing workspace's admins as able
 to assert any email. When that is not acceptable, either restrict installation
 to workspaces you approve, or replace email matching with explicit account
 linking: the user confirms the link while signed in to the app, and you store
-`(team_id, slack_user_id) → user_id`.
+`(team_id, slack_user_id)` to `user_id`.
 
 ## Host probe
 
@@ -304,4 +305,4 @@ New dependencies this module needs, to confirm with the user if absent:
 - [ ] `canAccess`, `getResource`, `searchResources`, `runAction` all scope by `userId`
 - [ ] Webhook routes excluded from the host's auth proxy
 - [ ] `BOT_STRINGS` in the product's language
-- [ ] Production chat state adapter chosen — [setup.md](setup.md)
+- [ ] Production chat state adapter chosen, see [setup.md](setup.md)

@@ -36,9 +36,13 @@ input. Every webhook may arrive twice, on a cold instance, with three seconds to
 answer. The hard parts are identity, scoping, acknowledgement and idempotency;
 the chat loop itself is twenty lines.
 
-Extracted from a production Next.js 16 app on Vercel and Supabase and audited
-first. [provenance.md](references/provenance.md) lists what was fixed, what was
-kept on purpose, and what was added here without having run in production.
+Written by the engineer who has shipped this module. The earlier implementation
+it was audited against was the Slack assistant of a Next.js 16 product on Vercel
+and Supabase. The templates hold the properties such a bot has to hold: every
+answer scoped to the person who asked, one side effect per approved click
+however often it is clicked, both webhooks acknowledged inside three seconds,
+and a failure the person can see. [provenance.md](references/provenance.md) has
+the record.
 
 ## When to use
 
@@ -49,30 +53,30 @@ kept on purpose, and what was added here without having run in production.
 
 ## When NOT to use
 
-- **Learning the Chat SDK API, cards, modals, other platforms** → the `chat-sdk`
+- **Learning the Chat SDK API, cards, modals, other platforms**: the `chat-sdk`
   skill. This skill uses the SDK; it does not document it.
-- **Model choice, streaming, tool-calling details** → the `ai-sdk` skill.
-- **Reading channel history as a data source** → a different module (history
+- **Model choice, streaming, tool-calling details**: the `ai-sdk` skill.
+- **Reading channel history as a data source**: a different module (history
   scopes, pagination, user-name resolution). Only posting and replying are here.
-- **One-way notifications only** → an incoming webhook URL. No bot needed.
-- **Slash commands or modals as the main UI** → `chat-sdk`; not covered here.
+- **One-way notifications only**: an incoming webhook URL. No bot needed.
+- **Slash commands or modals as the main UI**: `chat-sdk`; not covered here.
 
 ## Architecture
 
 ```
- Slack ──app_mention / message.im / message.channels──▶ POST /api/slack/events
-   ▲                                                      │ Chat SDK: verify, dedupe, ack
-   │                                                      ▼ after(): handlers.ts
-   │  streamed reply ◀── streamText + tools ◀── identity: Slack email → app user
-   │                                   │
-   │                                   ▼ run_action → approvals.request()
-   │  message with [Approve] [Cancel] ◀┘            (row first, then message)
-   │
-   └──click──▶ POST /api/slack/interactivity ─ verify ─ ack 200 ─ after():
-                 identity → canAccess → claim(pending→processing) → executor
-                 → finish → chat.update (buttons removed)
-
- App cron / job ──▶ outbound.postReport(token from slack_installations)
+  Slack  --app_mention / message.im / message.channels-->  POST /api/slack/events
+    ^                                                        |  verify, dedupe, ack
+    |                                                        v  after(): handlers.ts
+    |   streamed reply <-- streamText + tools(userId) <-- identity: email to user
+    |                                 |
+    |                                 v  run_action calls approvals.request()
+    |   [Approve] [Cancel] posted <---'  (row written first, then the message)
+    |
+    +-- click -->  POST /api/slack/interactivity: verify, ack 200, then after():
+    |                identity, canAccess, claim(pending to processing), executor,
+    |                finish, chat.update with the buttons removed
+    |
+    +-- app cron or job -->  outbound.postReport(token from slack_installations)
 ```
 
 ## Critical facts
@@ -89,7 +93,7 @@ kept on purpose, and what was added here without having run in production.
 4. **Ack in three seconds, then work.** Events and interactions both. Work done
    before the ack shows the clicker a timeout warning, and they click again.
 5. **Read-then-write is not idempotent.** "Is it still a draft? Then send" sends
-   twice under a double click. One conditional `UPDATE … WHERE status='pending'`
+   twice under a double click. One conditional `UPDATE ... WHERE status='pending'`
    is the lock.
 6. **Cache the init promise, not a boolean.** A flag set before the awaits lets
    a concurrent cold-start webhook reach a bot with no handlers.
@@ -112,20 +116,20 @@ kept on purpose, and what was added here without having run in production.
 > **Never parse the body before verifying the signature.** HMAC is over the raw
 > bytes. `request.text()` first.
 
-> **Never let a failure be silent.** After the 👀 reaction, silence reads as
+> **Never let a failure be silent.** After the eyes reaction, silence reads as
 > "still working". Post the failure; answer a refused click ephemerally.
 
 ## Quick start
 
-1. Probe the host and fill in the seams — [adaptation.md](references/adaptation.md).
-2. Create the tables and stores — [data-model.md](references/data-model.md).
-3. Configure the Slack app, env, OAuth install, bot factory and events route —
+1. Probe the host and fill in the seams, see [adaptation.md](references/adaptation.md).
+2. Create the tables and stores, see [data-model.md](references/data-model.md).
+3. Configure the Slack app, env, OAuth install, bot factory and events route, see
    [setup.md](references/setup.md).
-4. Wire identity, handlers and tools — [conversation.md](references/conversation.md).
-5. Add app-initiated posting — [outbound.md](references/outbound.md).
-6. Add approvals and the interactivity route — [approvals.md](references/approvals.md).
-7. Run the suite — [testing.md](references/testing.md).
-8. Walk the go-live checklist — [operations.md](references/operations.md).
+4. Wire identity, handlers and tools, see [conversation.md](references/conversation.md).
+5. Add app-initiated posting, see [outbound.md](references/outbound.md).
+6. Add approvals and the interactivity route, see [approvals.md](references/approvals.md).
+7. Run the suite, see [testing.md](references/testing.md).
+8. Walk the go-live checklist, see [operations.md](references/operations.md).
 
 ## Reference directory
 
@@ -139,4 +143,4 @@ kept on purpose, and what was added here without having run in production.
 | Buttons and the click back | block_actions, interactivity, x-slack-signature, 3 seconds, operation timed out, double click, idempotent, response_url, ephemeral, chat.update | [approvals.md](references/approvals.md) |
 | Proving it works | bun test, vitest, tests, signature test, double click test | [testing.md](references/testing.md) |
 | Running it | not replying, couldn't match, stuck processing, uninstall, tokens_revoked, logs, go-live, encryption | [operations.md](references/operations.md) |
-| What changed from the source | audit, defects, fixed, kept deliberately, added, port order | [provenance.md](references/provenance.md) |
+| What the audit changed | audit, defects, fixed, kept deliberately, added, fix order | [provenance.md](references/provenance.md) |

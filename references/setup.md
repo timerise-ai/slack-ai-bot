@@ -160,9 +160,10 @@ export async function exchangeCode(
 }
 ```
 
-The scope list is the defect most worth internalizing. The source app listed
-`users:read.email` and `app_mentions:read` in its setup documentation and on the
-Slack config page, but its authorize URL asked for neither. Slack issues tokens
+The scope list is the defect most worth internalizing. The earlier
+implementation listed `users:read.email` and `app_mentions:read` in its setup
+documentation and on the Slack config page, but its authorize URL asked for
+neither. Slack issues tokens
 with the scopes **the URL requests**. Every workspace installed through the
 app's own Connect button would get a token that cannot read emails, and every
 person would be told their account could not be matched. Installing from the
@@ -285,8 +286,8 @@ export async function GET(request: Request): Promise<Response> {
 
 Decisions in these two files:
 
-- **The return path lives in the cookie.** The source app packed it into
-  `state` as `nonce:encodedPath` and redirected to `${appUrl}${returnTo}`.
+- **The return path lives in the cookie.** The earlier implementation packed it
+  into `state` as `nonce:encodedPath` and redirected to `${appUrl}${returnTo}`.
   A path of `@evil.com` makes that `https://app.example@evil.com`: the app's
   host becomes a username and the browser goes to `evil.com`. `safeReturnPath`
   plus `new URL(path, appUrl)` closes it twice over.
@@ -310,12 +311,12 @@ instances:
 | Dedupe keys | Slack's retry of a slow event lands on another instance and is answered a second time |
 | Thread locks | Two instances stream into the same thread at once |
 
-The source app ran memory state in production; the first row is the symptom its
-users would see. **Use memory state only for local development.**
+The earlier implementation ran memory state on serverless; the first row is the
+symptom its users saw. **Use memory state only for local development.**
 
-In `host.ts`, swap `createChatState`. *These two variants are taken from the
-adapters' documentation and were not compiled by this skill's verification,
-because the packages were not installed where it ran.*
+In `host.ts`, swap `createChatState`. *These two variants follow the adapters'
+own documentation and were not compiled by this skill's verification, because
+the packages were not installed where it ran.*
 
 ```ts
 import { createRedisState } from "@chat-adapter/state-redis";
@@ -406,18 +407,20 @@ export function getBot(): Promise<BotRuntime> {
 ```
 
 - **`installationProvider`** makes `slack_installations` the only place a token
-  lives. The source app instead copied every token into chat state at cold
-  start (`setInstallation` in a loop) and again in the OAuth callback, with a
+  lives. The earlier implementation instead copied every token into chat state
+  at cold start (`setInstallation` in a loop) and again in the OAuth callback,
+  with a
   comment noting the second write could fail and would "be picked up on next
   cold start". With memory state that also meant a workspace installed on
   instance A did not exist on instance B. *The provider option is present in
-  `@chat-adapter/slack` 4.40+ and its lookup path was read in the adapter
-  source, but this configuration has not run in production; the seeding
+  `@chat-adapter/slack` 4.40+ and its lookup path was verified in the adapter's
+  own code, but this configuration has not run in production; the seeding
   approach has.* If you must seed instead, do it inside `init()` so it is
   covered by the cached promise, and use a shared state adapter.
 - **`onLockConflict: "force"`** is marked deprecated in favour of the
-  `concurrency` option (`"queue"`, `"debounce"`, …) in current SDK versions. It
-  is kept because it is what ran in production. `concurrency: "queue"` is the
+  `concurrency` option (`"queue"`, `"debounce"`, ...) in current SDK versions. It
+  is kept because it is what the earlier implementation ran.
+  `concurrency: "queue"` is the
   likely better answer, since it serializes replies instead of overlapping them;
   try it, and watch for follow-ups being answered late rather than dropped.
 
