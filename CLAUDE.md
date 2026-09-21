@@ -24,10 +24,10 @@ read it before "simplifying" anything.
 
 ## Structure
 
-- `SKILL.md`: entry point, loaded whole on every activation, so it stays between 130 and 160 lines. The
-  frontmatter `description` is the trigger surface; the body carries the architecture diagram, eight
-  **critical facts**, five **hard rules**, the quick-start order, and the **reference directory table**
-  mapping trigger keywords to files.
+- `SKILL.md`: entry point, loaded whole on every activation, so it stays between 130 and 160 lines, the
+  closing index line aside. The frontmatter `description` is the trigger surface; the body carries the
+  architecture diagram, eight **critical facts**, five **hard rules**, the quick-start order, the **reference
+  directory table** mapping trigger keywords to files, and a closing line linking the skills index.
 - `README.md`: the human-facing front door, in the section order of the skill standard: install, activation,
   the file table, the five non-negotiables, requirements, verification, the *Not this* table, contributing.
 - `references/*.md`: one topic per file, loaded on demand. `adaptation.md` (the seam contract and `BotHost`)

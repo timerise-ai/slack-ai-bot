@@ -144,3 +144,5 @@ the record.
 | Proving it works | bun test, vitest, tests, signature test, double click test | [testing.md](references/testing.md) |
 | Running it | not replying, couldn't match, stuck processing, uninstall, tokens_revoked, logs, go-live, encryption | [operations.md](references/operations.md) |
 | What the audit changed | audit, defects, fixed, kept deliberately, added, fix order | [provenance.md](references/provenance.md) |
+
+Part of the [Timerise Skills](https://github.com/timerise-ai/skills) index, which lists the sibling skills.
