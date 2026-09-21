@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-09-21
+
+Wording release. The skill content is unchanged from 0.1.0.
+
+### Added
+
+- `SKILL.md` closes with a line linking the
+  [Timerise Skills](https://github.com/timerise-ai/skills) index, so an agent that
+  has the skill loaded can find the sibling skills for neighbouring modules without
+  leaving the entry point.
+
+### Changed
+
+- `CLAUDE.md` records the closing line in the `SKILL.md` layout, and the line budget
+  it states holds that line aside.
+
 ## [0.1.0] - 2026-09-21
 
 First release. A two-way Slack AI bot for a **Next.js App Router** app: people
