@@ -35,13 +35,14 @@ skills-compatible agent it detects, including Claude Code, Codex CLI and Gemini 
 npx skills add timerise-ai/slack-ai-bot
 ```
 
-Name the agents instead with `-a`, for example `npx skills add timerise-ai/slack-ai-bot -a claude-code -a codex`.
+Name the agents instead with `-a`, for example
+`npx skills add timerise-ai/slack-ai-bot -a claude-code -a codex`.
 
 ### Manual install
 
-Nothing here is Claude-specific: the skill is a plain [Agent Skills](https://agentskills.io) folder, `SKILL.md`
-plus markdown references with no file that calls a model, so cloning it into an agent's skills directory is all
-an install is. For Claude Code:
+Nothing here is Claude-specific: the skill is a plain [Agent Skills](https://agentskills.io) folder,
+`SKILL.md` plus markdown references with no file that calls a model, so cloning it into an agent's skills
+directory is all an install is. For Claude Code:
 
 ```bash
 git clone https://github.com/timerise-ai/slack-ai-bot.git ~/.claude/skills/slack-ai-bot
@@ -69,14 +70,18 @@ cannot identify the person talking to it. Invoke it explicitly with `/slack-ai-b
 `$slack-ai-bot` in Codex CLI, or from `/skills` in Gemini CLI.
 
 Each host matches a task against the description its own way, so invoke the skill explicitly on a first run
-rather than assuming it fired. Only `SKILL.md` is read up front; the `references/` files load on demand, so the
-skill stays cheap in context until a topic is actually needed.
+rather than assuming it fired. Only `SKILL.md` is read up front; the `references/` files load on demand, so
+the skill stays cheap in context until a topic is actually needed.
 
 ## What's inside
 
 | File | Contents |
 |---|---|
 | `SKILL.md` | Entry point: architecture diagram, critical facts, hard rules, quick start, and the reference directory |
+| `README.md` | This file |
+| `CHANGELOG.md` | One section per release, newest first |
+| `CLAUDE.md` | The editing conventions, for an agent editing this repository |
+| `LICENSE` | MIT |
 | `references/adaptation.md` | The seam contract: the `BotHost` interface, the rename table, the identity lookup and its trust decision, the host probe |
 | `references/data-model.md` | `slack_installations` and `slack_approvals`, the store interfaces, the Postgres schema, and the conditional-update `claim` in four data layers |
 | `references/setup.md` | Slack app configuration, environment, the requested scope list, OAuth install routes, chat state, the cached bot factory, the events route |
@@ -86,6 +91,8 @@ skill stays cheap in context until a topic is actually needed.
 | `references/testing.md` | The suite, 31 tests, what each group proves, and the manual end-to-end script |
 | `references/operations.md` | Symptom table, stuck approvals, uninstalls, what to make visible, logging, the go-live checklist |
 | `references/provenance.md` | The engineering ledger: what the audit changed and how the templates verify it, what was kept on purpose, and what is new in the skill |
+| `evals/` | The prompts an operator types after installing (`prompts.md`) and one file per agent eval: the skill installed into an empty Next.js app, one prompt, no help, then type-checked, built and tested |
+| `.github/workflows/agent-eval.yml` | The caller of the index's reusable eval workflow, run on every published release and on a maintainer's dispatch |
 
 The seam is the contract table at the top of `references/adaptation.md` and the `BotHost` interface under it:
 one file the host app fills in. It bounds the domain nouns, the app's own user id and access check, the
