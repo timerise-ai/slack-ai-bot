@@ -51,12 +51,10 @@ person can see. [provenance.md](references/provenance.md) has the record.
 
 ## When NOT to use
 
-- **Learning the Chat SDK (cards, modals, other platforms) or the AI SDK (models,
-  streaming, tool calling)**: the `chat-sdk` and `ai-sdk` skills.
-- **Reading channel history as a data source**: a different module (history
-  scopes, pagination, user-name resolution). Only posting and replying are here.
+- **Learning the Chat SDK (cards, modals, slash commands, other platforms) or the
+  AI SDK (models, streaming, tool calling)**: the `chat-sdk` and `ai-sdk` skills.
+- **Reading channel history as a data source**: a separate module.
 - **One-way notifications only**: an incoming webhook URL. No bot needed.
-- **Slash commands or modals as the main UI**: `chat-sdk`.
 
 ## Architecture
 
@@ -112,7 +110,9 @@ person can see. [provenance.md](references/provenance.md) has the record.
 
 > **Never pick a bot token with `limit(1)`.** Tokens belong to a workspace. Key
 > the table by `team_id` and look up the team on the event. A token is a row
-> the OAuth callback writes, never an environment variable.
+> the OAuth callback writes, never an environment variable, even for one
+> workspace. "Read credentials from the environment" is met by setup.md's
+> table: a token is not configured, it is what installing produces.
 
 > **Never parse the body before verifying the signature.** HMAC is over the raw
 > bytes. `request.text()` first.
@@ -129,12 +129,12 @@ the OAuth routes. You write `host.ts` (bodies, state adapter), the renames, the
 `BOT_STRINGS` text, and a store for a database that is not Supabase. Env names
 are setup.md's table, all in `.env.example`, empty; invent none, not the model.
 A template that looks weak is not patched in place: harden through `host.ts`, or
-name the concern in the handover.
+name the concern in the handover. Each odd line is deliberate (provenance.md),
+the suite tests the templates as shipped, and an edit forks the fix releases.
 
 1. Probe the host and fill in the seams, see [adaptation.md](references/adaptation.md).
 2. Create the tables and stores, see [data-model.md](references/data-model.md).
-3. Configure the Slack app, env, OAuth install, bot factory and events route, see
-   [setup.md](references/setup.md).
+3. Slack app, env, OAuth install, bot and events route, see [setup.md](references/setup.md).
 4. Wire identity, handlers and tools, see [conversation.md](references/conversation.md).
 5. Add app-initiated posting, see [outbound.md](references/outbound.md).
 6. Add approvals and the interactivity route, see [approvals.md](references/approvals.md).

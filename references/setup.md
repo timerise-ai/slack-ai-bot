@@ -52,9 +52,10 @@ redirect, before the page will save.
 
 There is **no `SLACK_BOT_TOKEN`**. A single env token makes the app
 single-workspace; tokens come from `slack_installations`, per team. A map of
-tokens in one variable is the same mistake. "Read every credential from the
-environment" means the rows of this table; a bot token is per-workspace data
-the OAuth callback writes.
+tokens in one variable is the same mistake, and so is one workspace's token,
+team id and bot user id in three variables with the OAuth routes switched off.
+"Read every credential from the environment" means the rows of this table; a
+bot token is per-workspace data the OAuth callback writes.
 
 Write every name above to `.env.example`, empty, and make sure `.gitignore`
 does not ignore that file. Add the host's own database connection if its
@@ -476,6 +477,13 @@ The SDK verifies the signature, answers the challenge, drops duplicates and
 returns 200 immediately; handlers run inside the `waitUntil` task. Without
 `after` (or `waitUntil` from `@vercel/functions`) the platform may freeze the
 function as soon as the response is sent and the reply is cut off mid-stream.
+
+`getBot()` runs before the ack on purpose: the adapter it builds is what
+verifies the signature and answers the challenge. A cold start that takes
+longer than three seconds earns a Slack retry, and that retry waits on the same
+cached init promise. Do not move initialization behind a hand-rolled ack; it
+re-implements the verification the SDK already does, in a route the suite does
+not test.
 
 Do not set `runtime = "edge"`. The handlers need Node APIs and minutes, not
 seconds.
