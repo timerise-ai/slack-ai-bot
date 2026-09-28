@@ -22,3 +22,9 @@ isolated: true
 timedOut: false
 runUrl: https://github.com/timerise-ai/slack-ai-bot/actions/runs/36443172956
 ---
+
+Rubric 8/8. Scored from the summary. It reports the templates copied unchanged apart from `host.ts`, the
+suite run under vitest with only the import line changed, reporting 31, Postgres chat state that fails
+loudly when `POSTGRES_URL` is missing rather than falling back to memory, Supabase stores, the model left
+as the string in `host.ts`, and every variable in `.env.example`, empty and un-ignored. The handover names
+the demo bodies and the 401 install, the state adapter and its variable, and the email trust decision.
