@@ -125,6 +125,9 @@ marked.
 - Single 429 retry honouring `Retry-After`. (tested)
 - Differentiated identity failure reasons. (tested)
 - Header length guard and `missing_ts` error in the poster.
+- `safeReturnPath` judges the parsed URL, not only the string: the URL parser
+  drops tabs and newlines, so `/\t/evil.com` passed the string checks and
+  redirected to `evil.com`. Found by an agent eval against 0.1.3. (tested)
 - All of [operations.md](operations.md) beyond the symptom causes: there was no
   operator surface to carry over.
 

@@ -36,13 +36,11 @@ input. Every webhook may arrive twice, on a cold instance, with three seconds to
 answer. The hard parts are identity, scoping, acknowledgement and idempotency;
 the chat loop itself is twenty lines.
 
-Written by the engineer who has shipped this module. The earlier implementation
-it was audited against was the Slack assistant of a Next.js 16 product on Vercel
-and Supabase. The templates hold the properties such a bot has to hold: every
-answer scoped to the person who asked, one side effect per approved click
-however often it is clicked, both webhooks acknowledged inside three seconds,
-and a failure the person can see. [provenance.md](references/provenance.md) has
-the record.
+Written by the engineer who has shipped this module, audited against the Slack
+assistant of a Next.js 16 product on Vercel and Supabase. The templates hold
+what such a bot must: every answer scoped to the asker, one side effect per
+approved click, both webhooks acked inside three seconds, and a failure the
+person can see. [provenance.md](references/provenance.md) has the record.
 
 ## When to use
 
@@ -53,13 +51,12 @@ the record.
 
 ## When NOT to use
 
-- **Learning the Chat SDK API, cards, modals, other platforms**: the `chat-sdk`
-  skill. This skill uses the SDK; it does not document it.
-- **Model choice, streaming, tool-calling details**: the `ai-sdk` skill.
+- **Learning the Chat SDK (cards, modals, other platforms) or the AI SDK (models,
+  streaming, tool calling)**: the `chat-sdk` and `ai-sdk` skills.
 - **Reading channel history as a data source**: a different module (history
   scopes, pagination, user-name resolution). Only posting and replying are here.
 - **One-way notifications only**: an incoming webhook URL. No bot needed.
-- **Slash commands or modals as the main UI**: `chat-sdk`; not covered here.
+- **Slash commands or modals as the main UI**: `chat-sdk`.
 
 ## Architecture
 
@@ -84,8 +81,9 @@ the record.
 1. **In-memory chat state breaks thread follow-ups on serverless.** Thread
    subscriptions, dedupe keys and locks live in the state adapter. With memory
    state, every cold start forgets which threads the bot follows and Slack
-   retries are processed twice. Production needs a shared adapter, picked in
-   `host.ts`; never fall back to memory on a missing variable, state or stores.
+   retries are processed twice. Swap `createChatState` in `host.ts` to Redis or
+   Postgres now, not in the handover; never fall back to memory on a missing
+   variable, for state or stores.
 2. **Slack grants the scopes the authorize URL requests.** The app config page
    only sets the ceiling. Omit `users:read.email` from the URL and every token
    lacks it, `users.info` returns no email, and no user can ever be matched.
@@ -130,6 +128,8 @@ whole file map in setup.md even for an inbound-only task: handlers import
 the OAuth routes. You write `host.ts` (bodies, state adapter), the renames, the
 `BOT_STRINGS` text, and a store for a database that is not Supabase. Env names
 are setup.md's table, all in `.env.example`, empty; invent none, not the model.
+A template that looks weak is not patched in place: harden through `host.ts`, or
+name the concern in the handover.
 
 1. Probe the host and fill in the seams, see [adaptation.md](references/adaptation.md).
 2. Create the tables and stores, see [data-model.md](references/data-model.md).

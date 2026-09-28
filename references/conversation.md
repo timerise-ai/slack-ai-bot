@@ -273,6 +273,11 @@ Reasoning behind the non-obvious lines:
   saw the eyes reaction, then nothing, forever.
 - **`thread.subscribe()` only on first contact.** It is a state write; repeating
   it on every follow-up is wasted latency.
+- **The whole thread is the model's history**, not only the asker's turns.
+  Everything in `recentMessages` is already visible to everyone in the thread;
+  what must stay per person is what the tools can reach, and the closed-over
+  `userId` scopes that. Splitting history per sender breaks a follow-up that
+  refers to a colleague's message and protects nothing.
 - **`stepCountIs(6)`** is a budget, not a suggestion. Without it a model that
   keeps calling tools runs until the function times out, holding the thread lock.
 

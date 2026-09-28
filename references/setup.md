@@ -107,15 +107,21 @@ export function buildAuthorizeUrl(input: {
   return url.toString();
 }
 
+const RETURN_BASE = "https://return-path.invalid";
+
 /**
  * Only same-site paths survive. `//evil.com` and `/\evil.com` are protocol-relative
  * URLs, and `@evil.com` appended to the app URL turns the app host into a username.
+ * The string checks are not enough on their own: the URL parser drops tabs and
+ * newlines, so `/\t/evil.com` becomes `//evil.com`. Judge the parsed URL.
  */
 export function safeReturnPath(value: string | null | undefined): string {
   if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
     return "/";
   }
-  return value;
+  const url = new URL(value, RETURN_BASE);
+  if (url.origin !== RETURN_BASE || url.pathname.startsWith("//")) return "/";
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 /** Appends a query parameter without breaking a return path that already has a query. */

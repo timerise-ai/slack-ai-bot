@@ -171,7 +171,8 @@ describe("OAuth helpers", () => {
   });
   it("only lets same-site paths through", () => {
     expect(safeReturnPath("/settings?tab=slack")).toBe("/settings?tab=slack");
-    for (const bad of ["//evil.com", "/\\evil.com", "@evil.com", "https://evil.com", "", null]) {
+    for (const bad of ["//evil.com", "/\\evil.com", "@evil.com", "https://evil.com", "", null,
+      "/\t/evil.com", "/\n/evil.com", "/a/..//evil.com"]) {
       expect(safeReturnPath(bad)).toBe("/");
     }
   });

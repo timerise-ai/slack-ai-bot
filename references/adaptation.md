@@ -279,6 +279,12 @@ linking: the user confirms the link while signed in to the app, and you store
 administrator types in is neither: it moves the same trust to whoever edits the
 mapping, and nobody confirms it.
 
+Restricting installation needs no change to the routes or handlers. Do it in
+the host's `InstallationStore`: `get` returns `null` and `upsert` throws for a
+team not on your list. The handlers, the interactivity route and the adapter's
+`installationProvider` already stop on a missing installation, and the OAuth
+callback already answers a failed `upsert` with `install_failed`.
+
 ## Host probe
 
 Run before generating files:
