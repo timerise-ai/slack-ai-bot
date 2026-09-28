@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-09-28
+
+Security fix release, from scoring the prompt-1 agent eval runs against 0.1.3.
+
+### Security
+
+- `safeReturnPath` in `references/setup.md` accepted `/<tab>/evil.com`: it
+  passed the string checks, and the URL parser drops tabs and newlines, so
+  `withParam` resolved it to `https://evil.com/`. Through
+  `/api/auth/slack/connect?return_to=/%09/evil.com`, a signed-in user who then
+  declined the Slack consent screen was redirected off-site. The function now
+  judges the parsed URL, and the same-site test covers the inputs. Apps built
+  from any earlier version should copy the new `safeReturnPath` into
+  `lib/slack-bot/oauth.ts`.
+
+### Changed
+
+- `SKILL.md`: swap `createChatState` to Redis or Postgres during the build, not
+  in the handover; a template that looks weak is hardened through `host.ts` or
+  named in the handover, never patched in place.
+- `references/adaptation.md`: restricting installation to approved workspaces
+  goes in the host's `InstallationStore`, with no change to routes or handlers.
+- `references/conversation.md`: why the whole thread is the model's history.
+- `references/provenance.md`: the return-path fix, under *Added*.
+
 ## [0.1.3] - 2026-09-28
 
 Fix release, from scoring the prompt-1 agent eval runs against 0.1.2.
