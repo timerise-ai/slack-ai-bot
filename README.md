@@ -114,7 +114,7 @@ by the suite in `references/testing.md`:
    outsider and asserts the request is refused and still pending.
 3. **Never pick a bot token with `limit(1)`.** A token belongs to a workspace, not to whoever pressed Install,
    so `slack_installations` is keyed by `team_id` and the team comes off the event. One row per workspace is
-   the shape the schema enforces.
+   the shape the schema enforces, and the OAuth callback writes it: a token is never an environment variable.
 4. **Never parse the body before verifying the signature.** The HMAC is over the raw bytes, so a re-serialized
    body never matches. `request.text()` comes first, and the comparison is over byte lengths, so a forged
    multi-byte signature returns false instead of throwing. Both are in the suite.

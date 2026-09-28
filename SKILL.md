@@ -84,12 +84,14 @@ the record.
 1. **In-memory chat state breaks thread follow-ups on serverless.** Thread
    subscriptions, dedupe keys and locks live in the state adapter. With memory
    state, every cold start forgets which threads the bot follows and Slack
-   retries are processed twice. Production needs a shared adapter.
+   retries are processed twice. Production needs a shared adapter, picked in
+   `host.ts`; never fall back to memory on a missing variable, state or stores.
 2. **Slack grants the scopes the authorize URL requests.** The app config page
    only sets the ceiling. Omit `users:read.email` from the URL and every token
    lacks it, `users.info` returns no email, and no user can ever be matched.
 3. **The model picks the ids, so every tool is an authorization boundary.**
    Close over the resolved `userId`; never accept it, or trust an id, as input.
+   Resolve it by Slack email (`findUserIdByEmail`) or adaptation.md's user link.
 4. **Ack in three seconds, then work.** Events and interactions both. Work done
    before the ack shows the clicker a timeout warning, and they click again.
 5. **Read-then-write is not idempotent.** "Is it still a draft? Then send" sends
@@ -111,7 +113,8 @@ the record.
 > app user and check access to the resource, every time.
 
 > **Never pick a bot token with `limit(1)`.** Tokens belong to a workspace. Key
-> the table by `team_id` and look up the team on the event.
+> the table by `team_id` and look up the team on the event. A token is a row
+> the OAuth callback writes, never an environment variable.
 
 > **Never parse the body before verifying the signature.** HMAC is over the raw
 > bytes. `request.text()` first.
@@ -121,6 +124,13 @@ the record.
 
 ## Quick start
 
+Copy every code block verbatim to the path on its first line, and write the
+whole file map in setup.md even for an inbound-only task: handlers import
+`services.ts`, which imports approvals and outbound, and a token arrives through
+the OAuth routes. You write `host.ts` (bodies, state adapter), the renames, the
+`BOT_STRINGS` text, and a store for a database that is not Supabase. Env names
+are setup.md's table, all in `.env.example`, empty; invent none, not the model.
+
 1. Probe the host and fill in the seams, see [adaptation.md](references/adaptation.md).
 2. Create the tables and stores, see [data-model.md](references/data-model.md).
 3. Configure the Slack app, env, OAuth install, bot factory and events route, see
@@ -128,8 +138,11 @@ the record.
 4. Wire identity, handlers and tools, see [conversation.md](references/conversation.md).
 5. Add app-initiated posting, see [outbound.md](references/outbound.md).
 6. Add approvals and the interactivity route, see [approvals.md](references/approvals.md).
-7. Run the suite, see [testing.md](references/testing.md).
+7. Run the suite unmodified, reporting 31, see [testing.md](references/testing.md).
 8. Walk the go-live checklist, see [operations.md](references/operations.md).
+9. Hand over: every `host.ts` body still on the demo (an unchanged
+   `getCurrentUserId` makes every install answer 401), the chat state adapter
+   production uses and its variable, and the email trust decision.
 
 ## Reference directory
 

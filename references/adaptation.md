@@ -275,7 +275,9 @@ workspace may install your app, treat the installing workspace's admins as able
 to assert any email. When that is not acceptable, either restrict installation
 to workspaces you approve, or replace email matching with explicit account
 linking: the user confirms the link while signed in to the app, and you store
-`(team_id, slack_user_id)` to `user_id`.
+`(team_id, slack_user_id)` to `user_id`. Those are the two variants. A mapping an
+administrator types in is neither: it moves the same trust to whoever edits the
+mapping, and nobody confirms it.
 
 ## Host probe
 

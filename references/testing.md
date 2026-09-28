@@ -15,6 +15,11 @@ end-to-end pass is the manual script at the bottom.
 
 Written for `bun:test`. For vitest, change the one import to
 `import { describe, expect, it } from "vitest";`; the API used is common to both.
+That line is the only one that ever changes: the suite is not moved, split,
+converted to another runner or given extra cases, and it reports 31. Tests of
+your own go in a file of their own beside it. With neither runner installed,
+install one as a dev dependency (`npm i -D vitest`); the package registry is
+not an external service.
 
 ```bash
 bun test lib/slack-bot
@@ -44,17 +49,17 @@ import { createHmac } from "node:crypto";
 
 import { describe, expect, it } from "bun:test";
 
-import { createApprovalService, type ApprovalPoster } from "../lib/slack-bot/approvals";
-import { extractSlackOrigin } from "../lib/slack-bot/context";
-import { createSlackUserResolver } from "../lib/slack-bot/identity";
-import { markdownToMrkdwn } from "../lib/slack-bot/mrkdwn";
-import { safeReturnPath, SLACK_BOT_SCOPES, withParam } from "../lib/slack-bot/oauth";
-import { buildTextBlocks, slackApi, splitIntoChunks } from "../lib/slack-bot/outbound";
+import { createApprovalService, type ApprovalPoster } from "./approvals";
+import { extractSlackOrigin } from "./context";
+import { createSlackUserResolver } from "./identity";
+import { markdownToMrkdwn } from "./mrkdwn";
+import { safeReturnPath, SLACK_BOT_SCOPES, withParam } from "./oauth";
+import { buildTextBlocks, slackApi, splitIntoChunks } from "./outbound";
 import {
   createMemoryApprovalStore,
   createMemoryInstallationStore,
-} from "../lib/slack-bot/stores-memory";
-import { verifySlackSignature } from "../lib/slack-bot/verify-signature";
+} from "./stores-memory";
+import { verifySlackSignature } from "./verify-signature";
 
 const SECRET = "shhh";
 const NOW_MS = 1_700_000_000_000;
@@ -306,7 +311,8 @@ describe("approval round trip", () => {
 });
 ```
 
-Adjust the relative imports (`../lib/slack-bot/...`) to where the file lands.
+Copy it unchanged to `lib/slack-bot/slack-bot.test.ts`, beside the modules it
+imports. Its imports are relative to that path, so nothing in it needs adjusting.
 
 ## Manual end-to-end script
 

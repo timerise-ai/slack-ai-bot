@@ -51,7 +51,15 @@ redirect, before the page will save.
 | `REDIS_URL` or `POSTGRES_URL` | Production chat state |
 
 There is **no `SLACK_BOT_TOKEN`**. A single env token makes the app
-single-workspace; tokens come from `slack_installations`, per team.
+single-workspace; tokens come from `slack_installations`, per team. A map of
+tokens in one variable is the same mistake. "Read every credential from the
+environment" means the rows of this table; a bot token is per-workspace data
+the OAuth callback writes.
+
+Write every name above to `.env.example`, empty, and make sure `.gitignore`
+does not ignore that file. Add the host's own database connection if its
+stores need one, and nothing else: the model is the string in `host.ts`, not a
+variable.
 
 ## Scopes and OAuth helpers
 
@@ -330,6 +338,15 @@ createChatState: () => createPostgresState(),   // reads POSTGRES_URL or DATABAS
 
 Postgres is the no-new-infrastructure choice when the app already has a
 database; Redis is lower latency for the lock on every message.
+
+Pick one and write it in `host.ts` unconditionally. Do not choose between it and
+memory state by whether `REDIS_URL` or `POSTGRES_URL` is set: a deployment that
+forgot the variable then runs on memory state and loses follow-ups with no error
+anywhere. `createChatState()` runs inside `init()`, at the first webhook, so a
+missing URL fails there, loudly, and never at build time. The stores follow the
+same rule: they build their database client on first use, so a missing
+connection string throws on the first query, not at build time and not by
+switching to the memory stores.
 
 ## The bot
 
