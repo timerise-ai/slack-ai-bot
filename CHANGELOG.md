@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-09-28
+
+Fix release, from scoring the prompt-1 agent eval runs against 0.1.2.
+
+### Fixed
+
+- The suite in `references/testing.md` names `lib/slack-bot/slack-bot.test.ts`
+  as its destination but imported `../lib/slack-bot/...`, so it did not compile
+  there and every agent had to move or edit it. Its imports are now relative to
+  its own path. Apps built from earlier versions need no change: an edited copy
+  that compiles runs the same 31 tests.
+
+### Changed
+
+- `SKILL.md` quick start: copy every code block verbatim, write the whole file
+  map even for an inbound-only task, and know which parts are yours to write
+  (`host.ts`, the renames, the `BOT_STRINGS` text, a non-Supabase store). A new
+  last step names what the handover must tell the operator.
+- `SKILL.md` critical facts and hard rules: never fall back to memory state or
+  memory stores on a missing variable; identity is the Slack email or the
+  user-confirmed link; a bot token is a row, never an environment variable.
+  The README's third non-negotiable says the same.
+- `references/setup.md`: the env table is exactly what goes into
+  `.env.example`, empty and tracked; "read every credential from the
+  environment" does not cover bot tokens; the chat state adapter and the stores
+  are chosen unconditionally and fail at first use when their URL is missing.
+- `references/testing.md`: the `bun:test` import is the only line that changes;
+  the suite is never moved, split or converted, and a missing runner is
+  installed from the registry.
+- `references/adaptation.md`: an administrator-entered mapping is not one of
+  the two identity variants.
+
 ## [0.1.2] - 2026-09-28
 
 Documentation release. The skill content is unchanged from 0.1.1.
