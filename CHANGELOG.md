@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-09-28
+
+Documentation release. The skill content is unchanged from 0.1.1.
+
+### Added
+
+- `evals/prompts.md`: three prompts an operator types after installing, the
+  first of which the agent evals run before every release.
+- `.github/workflows/agent-eval.yml`: the caller of the index's reusable eval
+  workflow, run on every published release and on a maintainer's dispatch.
+
+### Changed
+
+- The README file table lists every file in the repository, `evals/` and the
+  eval workflow included.
+- `CLAUDE.md` describes `evals/` and the eval workflow, and records that evals
+  are not skill content.
+
 ## [0.1.1] - 2026-09-21
 
 Wording release. The skill content is unchanged from 0.1.0.
