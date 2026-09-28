@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-09-28
+
+Wording release, from scoring the prompt-1 agent eval runs against 0.1.4. The
+templates and the suite are unchanged.
+
+### Changed
+
+- `SKILL.md` hard rule 3: a bot token is never an environment variable, even
+  for a single workspace. An instruction to read credentials from the
+  environment is met by the variables in `references/setup.md`, because a token
+  is what installing produces, not something configured. The README's third
+  non-negotiable says the same, and `references/setup.md` names the
+  three-variable single-workspace shape as the same mistake.
+- `SKILL.md` quick start: why templates are not patched in place. Each odd line
+  is deliberate, the suite tests the templates as shipped, and an edit forks
+  the app from later fix releases.
+- `references/setup.md`: why `getBot()` runs before the ack, and why it is not
+  moved behind a hand-rolled one.
+- `SKILL.md` *When NOT to use* and quick start tightened to stay within 160
+  lines.
+
 ## [0.1.4] - 2026-09-28
 
 Security fix release, from scoring the prompt-1 agent eval runs against 0.1.3.
