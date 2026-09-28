@@ -22,3 +22,11 @@ isolated: true
 timedOut: false
 runUrl: https://github.com/timerise-ai/slack-ai-bot/actions/runs/36453859350
 ---
+
+Rubric 8/8. Scored from the summary. It reports every piece of the file map in place with `host.ts` as the
+one app-specific file, Postgres chat state with no memory fallback, tokens per workspace from the install flow,
+the Supabase variables beside setup.md's in an un-ignored `.env.example`, the model as a string in `host.ts`,
+and the suite under vitest with only its import changed, reporting 31. The one change it names as its own,
+escaping resource names in approval summaries so `<!channel>` cannot ping, is in the summary text the host
+builds. The handover names the 401 install, the placeholder data, the state adapter and its variable, and the
+email trust decision.
